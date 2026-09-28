@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <base href="$FLUTTER_BASE_HREF">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#1f6f5b">
+  <meta name="description" content="野鳥観察の記録・編集・集計。端末内保存とオフライン利用に対応。">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="birdlog_app_webversion">
+  <link rel="apple-touch-icon" href="icons/Icon-192.png">
+  <link rel="icon" href="favicon.png">
+  <link rel="manifest" href="manifest.json">
+  <title>birdlog_app_webversion</title>
+  <style>
+    html,body{margin:0;height:100%;background:#f7f7f2;font-family:system-ui,sans-serif}
+    #startup{padding:24px;color:#1f6f5b}
+    #pwa-status{position:fixed;bottom:0;left:0;right:0;z-index:1000;background:#e8f3ec;
+      color:#164e3f;padding:6px 12px;font:12px system-ui;display:flex;align-items:center;gap:8px}
+    #pwa-status[hidden]{display:none}
+    #pwa-status button{margin-left:auto;border:0;background:transparent;color:inherit;padding:6px;cursor:pointer}
+  </style>
+</head>
+<body>
+  <div id="startup">birdlog_app_webversion を起動しています…</div>
+  <div id="pwa-status" role="status"><span id="pwa-message">オフライン利用の準備をしています…</span><button id="dismiss-status" aria-label="通知を閉じる">閉じる</button></div>
+  <noscript>このアプリを使うにはJavaScriptを有効にしてください。</noscript>
+  <script src="storage.js"></script>
+  <script src="pwa.js"></script>
+  <script src="flutter_bootstrap.js" async></script>
+</body>
+</html>
