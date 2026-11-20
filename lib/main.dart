@@ -160,6 +160,7 @@ class _BirdLogHomeState extends State<BirdLogHome> with WidgetsBindingObserver {
   bool _savingRecord = false;
   bool _speciesOnlyMode = false;
   GlobalKey? _undoSnackBarKey;
+  final _messageSnackBarKeys = <GlobalKey>{};
   bool _fetchingPlaceNames = false;
   int _placeNamesProcessed = 0;
   int _placeNamesTotal = 0;
@@ -673,28 +674,28 @@ class _BirdLogHomeState extends State<BirdLogHome> with WidgetsBindingObserver {
       if ((_birdLists[tripId] ?? const <String>[]).contains(species)) {
         _showMessage(message);
       } else {
-        ScaffoldMessenger.of(context)
-          ..hideCurrentSnackBar()
-          ..showSnackBar(
-            SnackBar(
-              duration: const Duration(seconds: 10),
-              showCloseIcon: true,
-              content: Text('$message\n「$species」をよく見る鳥に追加しますか？'),
-              action: SnackBarAction(
-                label: '追加する',
-                onPressed: () {
-                  if (!mounted || !_trips.any((trip) => trip.id == tripId)) {
-                    return;
-                  }
-                  setState(() {
-                    final list = _birdLists.putIfAbsent(tripId, () => []);
-                    if (!list.contains(species)) list.add(species);
-                  });
-                  unawaited(_save());
-                },
-              ),
+        ScaffoldMessenger.of(context).hideCurrentSnackBar();
+        _showTrackedSnackBar(
+          (key) => SnackBar(
+            key: key,
+            duration: const Duration(seconds: 10),
+            showCloseIcon: true,
+            content: Text('$message\n「$species」をよく見る鳥に追加しますか？'),
+            action: SnackBarAction(
+              label: '追加する',
+              onPressed: () {
+                if (!mounted || !_trips.any((trip) => trip.id == tripId)) {
+                  return;
+                }
+                setState(() {
+                  final list = _birdLists.putIfAbsent(tripId, () => []);
+                  if (!list.contains(species)) list.add(species);
+                });
+                unawaited(_save());
+              },
             ),
-          );
+          ),
+        );
       }
       if (!speciesOnly && stationary == null && record.latitude == null) {
         _waitForSavedRecordLocation(record);
@@ -765,8 +766,9 @@ class _BirdLogHomeState extends State<BirdLogHome> with WidgetsBindingObserver {
       return;
     }
     final offeredSnapshot = record.toJson().toString();
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
+    _showTrackedSnackBar(
+      (key) => SnackBar(
+        key: key,
         duration: const Duration(seconds: 15),
         showCloseIcon: true,
         content: Text(
@@ -1098,9 +1100,27 @@ class _BirdLogHomeState extends State<BirdLogHome> with WidgetsBindingObserver {
 
   void _showMessage(String message) {
     if (!mounted) return;
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(SnackBar(content: Text(message)));
+    _showTrackedSnackBar((key) => SnackBar(key: key, content: Text(message)));
+  }
+
+  void _showTrackedSnackBar(SnackBar Function(GlobalKey) builder) {
+    final key = GlobalKey();
+    _messageSnackBarKeys.add(key);
+    final controller = ScaffoldMessenger.of(context).showSnackBar(builder(key));
+    unawaited(controller.closed.then((_) => _messageSnackBarKeys.remove(key)));
+  }
+
+  void _dismissTripMessageOutside(PointerDownEvent event) {
+    // The action needs to receive pointer-up before its notice is dismissed.
+    // Keep keys for queued notices too, since GPS can offer another action.
+    for (final key in [..._messageSnackBarKeys, ?_undoSnackBarKey]) {
+      final box = key.currentContext?.findRenderObject();
+      if (box is RenderBox && box.hasSize) {
+        final bounds = box.localToGlobal(Offset.zero) & box.size;
+        if (bounds.contains(event.position)) return;
+      }
+    }
+    ScaffoldMessenger.of(context).hideCurrentSnackBar();
   }
 
   void _showUndoMessage(String message, VoidCallback onUndo) {
@@ -1431,7 +1451,7 @@ class _BirdLogHomeState extends State<BirdLogHome> with WidgetsBindingObserver {
     final trip = _currentTrip;
     if (trip == null) return _buildCover();
     return Listener(
-      onPointerDown: (_) => ScaffoldMessenger.of(context).hideCurrentSnackBar(),
+      onPointerDown: _dismissTripMessageOutside,
       child: Scaffold(
         appBar: AppBar(
           leading: IconButton(

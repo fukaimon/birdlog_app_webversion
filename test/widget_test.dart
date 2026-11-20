@@ -525,6 +525,9 @@ void main() {
   testWidgets('offers to add an unlisted bird and reflects the choice', (
     tester,
   ) async {
+    late BirdLogDatabase db;
+    debugOpenBirdLogDatabase = () async =>
+        db = await BirdLogDatabase.openInMemory();
     await _pumpBirdLogApp(tester);
     await tester.tap(find.text('新しく始める'));
     await tester.pumpAndSettle();
@@ -533,9 +536,17 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.textContaining('「スズメ」をよく見る鳥に追加しますか？'), findsOneWidget);
     expect(find.widgetWithText(ChoiceChip, 'スズメ'), findsNothing);
-    await tester.tap(find.text('追加する'));
+    // A real tap may span multiple frames. The notice must stay visible
+    // until the button receives pointer-up.
+    final gesture = await tester.startGesture(
+      tester.getCenter(find.text('追加する')),
+    );
+    await tester.pump(const Duration(milliseconds: 400));
+    expect(find.text('追加する'), findsOneWidget);
+    await gesture.up();
     await tester.pumpAndSettle();
     expect(find.widgetWithText(ChoiceChip, 'スズメ'), findsOneWidget);
+    expect((await db.loadBirdLists()).values.single, ['スズメ']);
     await tester.tap(find.widgetWithText(ChoiceChip, 'スズメ'));
     await tester.tap(find.widgetWithText(FilledButton, '記録'));
     await tester.pumpAndSettle();
