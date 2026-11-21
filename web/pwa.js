@@ -11,9 +11,9 @@
   }
   navigator.serviceWorker.register('service-worker.js', {scope: './', updateViaCache: 'none'})
     .then(async registration => {
-      const ready = () => show(navigator.onLine
-        ? 'オフライン利用の準備ができました。ホーム画面にも追加できます。'
-        : 'オフライン：記録・編集・集計できます。地図はキャッシュにある範囲のみ表示されます。');
+      const ready = () => {
+        if (!navigator.onLine) show('オフライン：記録・編集・集計できます。地図はキャッシュにある範囲のみ表示されます。');
+      };
       if (registration.active) ready();
       const watch = worker => {
         if (!worker) return;

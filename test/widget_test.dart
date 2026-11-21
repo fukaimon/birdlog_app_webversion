@@ -884,6 +884,82 @@ void main() {
     expect(find.textContaining(', '), findsOneWidget);
   });
 
+  testWidgets('counts distinct recorded species overall and for each place', (
+    tester,
+  ) async {
+    SharedPreferences.setMockInitialValues({
+      'birdlog_app_webversion.view': 'trip',
+      'birdlog_app_webversion.currentTrip': 'trip-1',
+      'birdTripsFlutter': jsonEncode([
+        {
+          'id': 'trip-1',
+          'title': 'テスト観察地',
+          'startedAt': '2000-01-01T09:00:00.000',
+        },
+        {
+          'id': 'trip-2',
+          'title': '別の観察地',
+          'startedAt': '2000-01-02T09:00:00.000',
+        },
+      ]),
+      'birdLogsFlutter': jsonEncode([
+        for (final (index, species, place) in [
+          (1, 'スズメ', '架空公園'),
+          (2, 'スズメ', '架空公園'),
+          (3, 'カルガモ', '架空公園'),
+          (4, 'スズメ', '架空池'),
+          (5, '未登録の鳥名', ''),
+        ])
+          {
+            'id': 'record-$index',
+            'tripId': 'trip-1',
+            'species': species,
+            'count': '3',
+            'time': '2000-01-01T10:00:00.000',
+            'placeName': place,
+          },
+        for (final (index, species) in [(1, 'スズメ'), (2, 'トビ'), (3, 'トビ')])
+          {
+            'id': 'only-$index',
+            'tripId': 'trip-1',
+            'species': species,
+            'speciesOnly': true,
+            'count': '',
+          },
+        {
+          'id': 'other-trip',
+          'tripId': 'trip-2',
+          'species': 'アオサギ',
+          'count': '1',
+          'time': '2000-01-02T10:00:00.000',
+        },
+      ]),
+    });
+    await _pumpBirdLogApp(tester);
+    await tester.tap(find.text('集計'));
+    await tester.pumpAndSettle();
+    final texts = tester
+        .widgetList<SelectableText>(find.byType(SelectableText))
+        .map((widget) => widget.data!)
+        .toList();
+    expect(texts[0], contains('記録種数：4種'));
+    expect(texts[1], startsWith('記録種数：4種'));
+    expect(texts[1], contains('架空公園\n種数：2種\n'));
+    expect(texts[1], contains('架空池\n種数：1種\n'));
+    expect(texts[1], contains('地名未取得\n種数：1種\n'));
+    expect(texts[1], endsWith('$speciesOnlyHeading\nトビ\nスズメ'));
+    expect(texts[0], isNot(contains('アオサギ')));
+  });
+
+  testWidgets('shows zero species for an empty trip', (tester) async {
+    await _pumpBirdLogApp(tester);
+    await tester.tap(find.text('新しく始める'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('集計'));
+    await tester.pumpAndSettle();
+    expect(find.text('記録種数：0種\n記録はまだありません'), findsNWidgets(2));
+  });
+
   testWidgets('shows trip header only in species total export', (tester) async {
     SharedPreferences.setMockInitialValues({
       'birdlog_app_webversion.view': 'trip',
