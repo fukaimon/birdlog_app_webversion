@@ -1248,7 +1248,7 @@ class _BirdLogHomeState extends State<BirdLogHome> with WidgetsBindingObserver {
             totals[record.species]! + _numericCount(record.count);
       }
     }
-    if (totals.isEmpty) return '記録種数：0種\n記録はまだありません';
+    if (totals.isEmpty) return '記録はまだありません\n0種';
     final body = _orderedSpeciesEntries(totals)
         .map((entry) {
           if (entry.key.isEmpty) return '';
@@ -1262,14 +1262,13 @@ class _BirdLogHomeState extends State<BirdLogHome> with WidgetsBindingObserver {
     final header = _tripExportHeader();
     return [
       if (header.isNotEmpty) header,
-      '記録種数：${totals.length}種',
       body,
+      '${totals.length}種',
     ].join('\n');
   }
 
   String _placeSummaryText() {
     final speciesCount = _visibleRecords.map((r) => r.species).toSet().length;
-    final heading = '記録種数：$speciesCount種';
     final totalsByPlace = <String, Map<String, int>>{};
     for (final record in _visibleRecords.where((r) => !r.speciesOnly)) {
       final place = record.placeName.trim().isEmpty
@@ -1280,7 +1279,9 @@ class _BirdLogHomeState extends State<BirdLogHome> with WidgetsBindingObserver {
           (totals[record.species] ?? 0) + _numericCount(record.count);
     }
     if (totalsByPlace.isEmpty) {
-      return '$heading\n${_speciesOnlyText.isEmpty ? '記録はまだありません' : _speciesOnlyText}';
+      return _speciesOnlyText.isEmpty
+          ? '記録はまだありません\n0種'
+          : '$_speciesOnlyText\n$speciesCount種';
     }
     final places = totalsByPlace.keys.toList()
       ..sort((a, b) {
@@ -1288,22 +1289,19 @@ class _BirdLogHomeState extends State<BirdLogHome> with WidgetsBindingObserver {
         if (b == '地名未取得') return -1;
         return a.compareTo(b);
       });
-    final body = _withSpeciesOnly(
-      places
-          .map((place) {
-            final entries = _orderedSpeciesEntries(totalsByPlace[place]!);
-            return [
-              place,
-              '種数：${totalsByPlace[place]!.length}種',
-              ...entries.map(
-                (entry) =>
-                    entry.key.isEmpty ? '' : '${entry.key} ${entry.value}',
-              ),
-            ].join('\n');
-          })
-          .join('\n\n'),
-    );
-    return '$heading\n\n$body';
+    final body = places
+        .map((place) {
+          final entries = _orderedSpeciesEntries(totalsByPlace[place]!);
+          return [
+            place,
+            ...entries.map(
+              (entry) => entry.key.isEmpty ? '' : '${entry.key} ${entry.value}',
+            ),
+            '${totalsByPlace[place]!.length}種',
+          ].join('\n');
+        })
+        .join('\n\n');
+    return '${_withSpeciesOnly(body)}\n$speciesCount種';
   }
 
   String _recordExportText({required bool withLocation}) {

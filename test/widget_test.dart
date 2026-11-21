@@ -162,7 +162,7 @@ void main() {
           .widgetList<SelectableText>(find.byType(SelectableText))
           .map((w) => w.data!)
           .toList();
-      expect(summary.first, endsWith('\nスズメ'));
+      expect(summary.first, endsWith('\nスズメ\n1種'));
       expect(summary.first, isNot(contains('スズメ 0')));
       expect(
         summary.where((text) => text == '$speciesOnlyHeading\nスズメ'),
@@ -255,7 +255,7 @@ void main() {
       expect(
         texts
             .skip(1)
-            .every((text) => text.endsWith('$speciesOnlyHeading\nスズメ')),
+            .every((text) => text.contains('$speciesOnlyHeading\nスズメ')),
         isTrue,
       );
       for (final title in ['字名ごとの記録', '記録ごと（位置情報あり）', '記録ごと（位置情報なし）']) {
@@ -274,7 +274,12 @@ void main() {
               find.descendant(of: panel, matching: find.byType(SelectableText)),
             )
             .data!;
-        expect(text, endsWith('$speciesOnlyHeading\nスズメ'));
+        expect(
+          text,
+          endsWith(
+            '$speciesOnlyHeading\nスズメ${title == '字名ごとの記録' ? '\n1種' : ''}',
+          ),
+        );
       }
     },
   );
@@ -942,12 +947,16 @@ void main() {
         .widgetList<SelectableText>(find.byType(SelectableText))
         .map((widget) => widget.data!)
         .toList();
-    expect(texts[0], contains('記録種数：4種'));
-    expect(texts[1], startsWith('記録種数：4種'));
-    expect(texts[1], contains('架空公園\n種数：2種\n'));
-    expect(texts[1], contains('架空池\n種数：1種\n'));
-    expect(texts[1], contains('地名未取得\n種数：1種\n'));
-    expect(texts[1], endsWith('$speciesOnlyHeading\nトビ\nスズメ'));
+    expect(texts[0], endsWith('\n4種'));
+    expect(texts[1], endsWith('\n4種'));
+    expect(texts[1], contains('架空公園\nカルガモ 3\nスズメ 6\n2種'));
+    expect(texts[1], contains('架空池\nスズメ 3\n1種'));
+    expect(texts[1], contains('地名未取得\n未登録の鳥名 3\n1種'));
+    expect(texts[1], endsWith('$speciesOnlyHeading\nトビ\nスズメ\n4種'));
+    for (final text in texts.take(2)) {
+      expect(text, isNot(contains('記録種数：')));
+      expect(text, isNot(contains('種数：')));
+    }
     expect(texts[0], isNot(contains('アオサギ')));
   });
 
@@ -957,7 +966,7 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.text('集計'));
     await tester.pumpAndSettle();
-    expect(find.text('記録種数：0種\n記録はまだありません'), findsNWidgets(2));
+    expect(find.text('記録はまだありません\n0種'), findsNWidgets(2));
   });
 
   testWidgets('shows trip header only in species total export', (tester) async {
